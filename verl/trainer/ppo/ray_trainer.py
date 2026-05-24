@@ -476,8 +476,12 @@ class RayPPOTrainer:
             rollout_data_dir (str): Directory path to save the rollout data
         """
         with marked_timer("dump_rollout_generations", timing_raw, color="green"):
-            inputs = self.tokenizer.batch_decode(batch.batch["prompts"], skip_special_tokens=True)
-            outputs = self.tokenizer.batch_decode(batch.batch["responses"], skip_special_tokens=True)
+            # Emu3-Stage1 mask GRPO patch: response is entirely visual
+            # tokens (specials). skip_special_tokens=True wipes them and the
+            # rollout dump shows empty output. See source patch #4 in
+            # docs/EMU3_STAGE1_GRPO.md.
+            inputs = self.tokenizer.batch_decode(batch.batch["prompts"], skip_special_tokens=False)
+            outputs = self.tokenizer.batch_decode(batch.batch["responses"], skip_special_tokens=False)
             scores = batch.batch["token_level_scores"].sum(-1).cpu().tolist()
             sample_gts = [item.non_tensor_batch.get("reward_model", {}).get("ground_truth", None) for item in batch]
 

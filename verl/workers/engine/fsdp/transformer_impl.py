@@ -118,7 +118,7 @@ class FSDPEngine(BaseEngine):
         # Apply NPU patches for FSDP backend
         from .utils import apply_npu_fsdp_patches
 
-        apply_npu_fsdp_patches(self.model_config)
+        apply_npu_fsdp_patches()
 
         # build device mesh for Ulysses Sequence Parallel
 
@@ -364,7 +364,7 @@ class FSDPEngine(BaseEngine):
         )
 
         fsdp_mesh = self.device_mesh
-        sharding_strategy = get_sharding_strategy(fsdp_mesh, zero3_enable=self.engine_config.reshard_after_forward)
+        sharding_strategy = get_sharding_strategy(fsdp_mesh)
 
         # Note: We force turn off CPUOffload because it causes incorrect results when using grad accumulation
         if self.engine_config.strategy == "fsdp":
@@ -966,7 +966,7 @@ class FSDPEngineWithLMHead(FSDPEngine):
                         input_ids_rmpad,
                         position_ids_rmpad=position_ids_rmpad,
                         sp_size=self.ulysses_sequence_parallel_size,
-                        skip_position_ids_rmpad=getattr(self, "_veomni_handles_position_ids", False),
+                        skip_position_ids_rmpad=True if self.__class__.__name__ == "VeOmniEngineWithLMHead" else False,
                     )
                 input_ids_rmpad_rolled, _, _ = ulysses_pad_and_slice_inputs(
                     input_ids_rmpad_rolled,

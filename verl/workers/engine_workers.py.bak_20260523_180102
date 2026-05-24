@@ -692,11 +692,7 @@ class ActorRolloutRefWorker(Worker, DistProfilerExtension):
             return
 
         set_expandable_segments(False)
-        # PATCH: free PyTorch caching allocator before vLLM CuMem wake_up. Without this,
-        # PyTorch fragments from the just-finished actor step block cuMemCreate even
-        # though nvidia-smi shows the pages as free.
-        aggressive_empty_cache(force_sync=True)
-        log_gpu_memory_usage("Before resume weights", logger=logger, level=__import__("logging").INFO)
+        log_gpu_memory_usage("Before resume weights", logger=logger)
 
         # 1. resume rollout memory (weights were released during sleep)
         if self.config.rollout.free_cache_engine:

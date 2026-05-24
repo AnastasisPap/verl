@@ -12,6 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .transformer_impl import VeOmniEngine, VeOmniEngineWithLMHead, VeOmniEngineWithValueHead
+from .transformer_impl import VeOmniEngine, VeOmniEngineWithLMHead
 
-__all__ = ["VeOmniEngine", "VeOmniEngineWithLMHead", "VeOmniEngineWithValueHead"]
+__all__ = ["VeOmniEngine", "VeOmniEngineWithLMHead"]

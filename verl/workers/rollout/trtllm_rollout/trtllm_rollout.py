@@ -291,15 +291,16 @@ class ServerAdapter(BaseRollout):
     def __init__(
         self, config: RolloutConfig, model_config: HFModelConfig, device_mesh: DeviceMesh, replica_rank: int = -1
     ):
-        super().__init__(config, model_config, device_mesh)
-        if self.config.quantization == "fp8" and self.model_config.hf_config is not None:
+        if config.get("quantization", None) == "fp8":
             FP8_BLOCK_QUANT_KWARGS = {
                 "activation_scheme": "dynamic",
                 "fmt": "e4m3",
                 "quant_method": "fp8",
                 "weight_block_size": [128, 128],
             }
-            self.model_config.hf_config.quantization_config = dict(FP8_BLOCK_QUANT_KWARGS)
+            fp8_block_quant_kwargs = dict(FP8_BLOCK_QUANT_KWARGS)
+            model_config.hf_config.quantization_config = fp8_block_quant_kwargs
+        super().__init__(config, model_config, device_mesh)
         self._adapter = None
         self.hybrid_device_mesh = None
         self.gpu_id = None

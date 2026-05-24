@@ -51,8 +51,14 @@ class NaiveRewardManager(RewardManagerBase):
         extra_info["num_turns"] = num_turns
         extra_info["rollout_reward_scores"] = rollout_reward_scores
 
+        # Emu3-Stage1 mask GRPO patch: response tokens are entirely
+        # <|visual token NNNNNN|> + <|image end|>, all in the tokenizer's
+        # special-token range [151643, 184622). With skip_special_tokens=True
+        # (verl default) the response decodes to '' and the IoU reward
+        # fn finds nothing to parse. Keep specials so
+        # rewards/emu3_mask_iou_reward.py can extract them.
         response_str = await self.loop.run_in_executor(
-            None, lambda: self.tokenizer.decode(valid_response_ids, skip_special_tokens=True)
+            None, lambda: self.tokenizer.decode(valid_response_ids, skip_special_tokens=False)
         )
 
         extra_reward_kwargs = (

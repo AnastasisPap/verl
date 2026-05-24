@@ -3,12 +3,7 @@
 
 set -xeuo pipefail
 
-# GB200 NCCL WAR for async-RL Megatron: disable NVLS/MNNVL transports so NCCL
-# falls back to IB. Required on GB200 nodes without IMEX channel support, where
-# mbridge `export_weights -> all_gather` otherwise raises ncclUnhandledCudaError 801.
-export TLLM_DISABLE_NVLS_MNNVL=1
-
-project_name=${PROJECT_NAME:-'DAPO-Qwen3-8b-Base-MATH-fully-async-trtllm'}
+project_name='DAPO_fully_async'
 exp_name='DAPO-Qwen3-8b-Base-MATH-megatron-fully-async-trtllm-gb200-4-4-bypassFalse'
 
 adv_estimator=grpo

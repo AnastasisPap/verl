@@ -144,9 +144,6 @@ checkpoint:
   # speed up the checkpoint saving by 10x speed.
   mbridge_config: {}
 
-  # Whether to perform strict validation during weight export
-  strict: True
-
 # optimizer configs
 optim:
 

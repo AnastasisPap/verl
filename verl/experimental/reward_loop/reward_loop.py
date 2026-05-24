@@ -304,6 +304,7 @@ class RewardLoopManager:
     def _init_reward_loop_workers(self):
         self.reward_loop_workers = []
         num_workers = self.config.reward.num_workers
+        n_gpus_per_node = self.config.trainer.n_gpus_per_node
         node_ids = [node["NodeID"] for node in ray.nodes() if node["Alive"] and node["Resources"].get("CPU", 0) > 0]
 
         for i in range(num_workers):
@@ -313,6 +314,7 @@ class RewardLoopManager:
             self.reward_loop_workers.append(
                 self.reward_loop_workers_class.options(
                     name=f"reward_loop_worker_{i}",
+                    num_gpus=1,
                     scheduling_strategy=ray.util.scheduling_strategies.NodeAffinitySchedulingStrategy(
                         node_id=node_id,
                         soft=True,

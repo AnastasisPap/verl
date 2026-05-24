@@ -98,3 +98,41 @@ if is_npu_available:
             device_module.synchronize()
 
         TensorDictBase._sync_all = _sync_all_patch
+
+
+# --- Emu3-Stage1 GRPO compat shim --------------------------------------------
+# Register the Emu3 text-only submodel as a top-level AutoConfig / AutoModel
+# target so loading the SFT snapshot (model_type='emu3_text_model') doesn't
+# fall through to the multimodal Emu3Config path — that path triggers vLLM's
+# MultiModalBudget which needs Emu3Processor.image_token (absent on the fast
+# tokenizer) and dies the rollout actor. See emu3-mask-grpo-2348539.err for
+# the failure. Runs on every verl import (TaskRunner, WorkerDict,
+# vLLMHttpServer — all live under verl.workers), so the registration reaches
+# Ray-spawned actors without any sitecustomize/setup-hook gymnastics.
+try:
+    from transformers import Emu3ForCausalLM, Emu3TextConfig, Emu3TextModel
+    from transformers.models.auto.configuration_auto import CONFIG_MAPPING
+    from transformers.models.auto.modeling_auto import MODEL_FOR_CAUSAL_LM_MAPPING
+
+    if 'emu3_text_model' not in CONFIG_MAPPING._extra_content and        'emu3_text_model' not in CONFIG_MAPPING._mapping:
+        CONFIG_MAPPING.register('emu3_text_model', Emu3TextConfig)
+    if Emu3TextConfig not in MODEL_FOR_CAUSAL_LM_MAPPING._extra_content:
+        MODEL_FOR_CAUSAL_LM_MAPPING.register(Emu3TextConfig, Emu3ForCausalLM)
+    # vLLM's transformers backend uses AutoModel (not AutoModelForCausalLM)
+    # to look up the inner module (embed_tokens+layers+norm, NO lm_head).
+    # vLLM then adds its own ParallelLMHead and runs compute_logits on top.
+    # Registering Emu3ForCausalLM here (the full causal LM) caused vLLM to
+    # double-apply the lm_head: model.forward returned (B*S, vocab) instead
+    # of (B*S, hidden), then ParallelLMHead tried to project those 'hidden'
+    # states, crashing the rollout worker with
+    #   mat1 and mat2 shapes cannot be multiplied (1024x184640 and 4096x184640)
+    # See emu3-mask-grpo-2349597.err. Fix: register the inner Emu3TextModel.
+    from transformers.models.auto.modeling_auto import MODEL_MAPPING
+    if Emu3TextConfig not in MODEL_MAPPING._extra_content:
+        MODEL_MAPPING.register(Emu3TextConfig, Emu3TextModel)
+except Exception as _e:
+    # Don't crash the broader verl import if registration fails — log and
+    # continue (downstream Emu3 loads will fail loudly with their own errors).
+    logging.getLogger(__name__).warning(
+        'Emu3TextConfig registration skipped: %s', _e
+    )

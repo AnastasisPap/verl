@@ -72,7 +72,13 @@ class NaiveRewardManager(AbstractRewardManager):
 
             # decode
             prompt_str = self.tokenizer.decode(valid_prompt_ids, skip_special_tokens=True)
-            response_str = self.tokenizer.decode(valid_response_ids, skip_special_tokens=True)
+            # Emu3-Stage1 mask GRPO patch: response tokens for this task are
+            # entirely <|visual token NNNNNN|> + <|image end|> — all in the
+            # tokenizer's special-token range [151643, 184622). With
+            # skip_special_tokens=True (verl default) the response decodes
+            # to '' and the IoU reward fn finds nothing to parse. Keep
+            # specials so rewards/emu3_mask_iou_reward.py can extract them.
+            response_str = self.tokenizer.decode(valid_response_ids, skip_special_tokens=False)
 
             ground_truth = data_item.non_tensor_batch["reward_model"]["ground_truth"]
             data_source = data_item.non_tensor_batch[self.reward_fn_key]
